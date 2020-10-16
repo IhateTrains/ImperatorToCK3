@@ -365,6 +365,9 @@
     <ClCompile Include="Source\Imperator\Provinces\Provinces.cpp">
       <Filter>Imperator\Provinces</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Imperator\Provinces\Pop.cpp">
+      <Filter>Imperator\Provinces</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Imperator\Provinces\Pops.cpp">
       <Filter>Imperator\Provinces</Filter>
     </ClCompile>
