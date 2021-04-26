@@ -12,6 +12,7 @@
 #include "ConverterVersion.h"
 #include <filesystem>
 #include <ranges>
+#include <math.h>
 
 
 
@@ -54,7 +55,7 @@ CK3::World::World(const Imperator::World& impWorld, const Configuration& theConf
 	importImperatorFamilies(impWorld);
 
 
-	overWriteCountiesHistory(impWorld);
+	overWriteCountiesHistory();
 	removeInvalidLandlessTitles();
 }
 
@@ -256,7 +257,7 @@ void CK3::World::addHistoryToVanillaTitles() {
 }
 
 
-void CK3::World::overWriteCountiesHistory(const Imperator::World& impWorld) {
+void CK3::World::overWriteCountiesHistory() {
 	for (const auto& title : getTitles() | std::views::values) {
 		if (title->getRank()==TitleRank::county && title->capitalBaronyProvince > 0) { // title is a county and its capital province has a valid ID (0 is not a valid province in CK3)
 			if (!provinces.contains(title->capitalBaronyProvince))
