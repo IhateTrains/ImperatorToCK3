@@ -9,4 +9,9 @@ ColumnLimit: 160
 SortIncludes: true
 SortUsingDeclarations: true
 SpaceBeforeInheritanceColon: false
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
 UseTab: Always
