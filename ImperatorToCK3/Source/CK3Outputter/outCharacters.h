@@ -3,16 +3,15 @@
 
 
 
-#include <map>
 #include <memory>
 #include <string>
-
+#include <unordered_map>
 
 
 namespace CK3 {
 
 class Character;
-void outputCharacters(const std::string& outputModName, const std::map<std::string, std::shared_ptr<Character>>& characters);
+void outputCharacters(const std::string& outputModName, const std::unordered_map<std::string, std::shared_ptr<Character>>& characters);
 
 }
 

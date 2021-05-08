@@ -10,10 +10,12 @@
 #include "Log.h"
 #include "OSCompatibilityLayer.h"
 #include "ConverterVersion.h"
+#include "CommonRegexes.h"
 #include <filesystem>
 #include <ranges>
 #include <cmath>
 
+#include "ParserHelpers.h"
 
 
 using std::string;
@@ -78,16 +80,16 @@ void CK3::World::importImperatorCharacters(const Imperator::World& impWorld, con
 	for (const auto& character : impWorld.getCharacters()) {
 		importImperatorCharacter(character, ConvertBirthAndDeathDates, endDate);
 	}
-	LOG(LogLevel::Info) << ">> " << characters.size() << " total characters recognized.";
+	LOG(LogLevel::Info) << ">> " << getCharacters().size() << " total characters recognized.";
 }
 
 
-void CK3::World::importImperatorCharacter(const pair<unsigned long long, shared_ptr<Imperator::Character>>& character,
+void CK3::World::importImperatorCharacter(const pair<unsigned long long, shared_ptr<Imperator::Character>>& impCharacter,
 										  const bool ConvertBirthAndDeathDates = true,
 										  const date endDate = date(867, 1, 1)) {
 	// Create a new CK3 character
 	auto newCharacter = make_shared<Character>();
-	newCharacter->initializeFromImperator(character.second,
+	newCharacter->initializeFromImperator(impCharacter.second,
 										  religionMapper,
 										  cultureMapper,
 										  traitMapper,
@@ -97,8 +99,8 @@ void CK3::World::importImperatorCharacter(const pair<unsigned long long, shared_
 										  deathReasonMapper,
 										  ConvertBirthAndDeathDates,
 										  endDate);
-	character.second->registerCK3Character(newCharacter);
-	characters.emplace(newCharacter->ID, newCharacter);
+	impCharacter.second->registerCK3Character(newCharacter);
+	characters.addCharacter(newCharacter);
 }
 
 
@@ -295,11 +297,11 @@ void CK3::World::overWriteCountiesHistory() {
 			if (!provinces.contains(title->capitalBaronyProvince))
 				LOG(LogLevel::Warning) << "Capital barony province not found " << title->capitalBaronyProvince;
 			else {
-				const auto& impProvince = provinces.find(title->capitalBaronyProvince)->second->getImperatorProvince();
-				if (impProvince) {
+				if (const auto& impProvince = provinces.find(title->capitalBaronyProvince)->second->getImperatorProvince(); impProvince) {
 					if (const auto& impCountry = impProvince->getOwner().second; impCountry) {
 						auto impMonarch = impCountry->getMonarch();
 						if (impMonarch) {
+							const auto& characters = getCharacters();
 							const auto& holderItr = characters.find("imperator" + std::to_string(*impMonarch));
 							if (holderItr != characters.end()) {
 								title->setHolder(holderItr->second);
@@ -364,20 +366,20 @@ void CK3::World::removeInvalidLandlessTitles() {
 
 void CK3::World::purgeLandlessVanillaCharacters() {
 	set<string> farewellIDs;
-	std::ranges::transform(std::as_const(characters), std::inserter(farewellIDs, farewellIDs.begin()),
-	                       [](decltype(characters)::value_type const& pair) { return pair.first; });
+	const auto& charactersMap = getCharacters();
+	std::ranges::transform(std::as_const(charactersMap), std::inserter(farewellIDs, farewellIDs.begin()),
+						   [](std::remove_cvref_t<decltype(charactersMap)>::value_type const& pair) { return pair.first; });
 	for (const auto& id : farewellIDs) {
 		if (id.starts_with("imperator")) {
 			farewellIDs.erase(id);
 		}
 	}
-
+	
 	for (const auto& titlePtr : getTitles() | std::views::values) {
 		farewellIDs.erase(titlePtr->getHolder()->ID);
 	}
-	for (const auto& characterId : farewellIDs) {
-		characters[characterId]->breakAllLinks();
-		characters.erase(characterId);
+	for (const auto& id : farewellIDs) {
+		characters.erase(id);
 	}
 	Log(LogLevel::Info) << "Purged " << farewellIDs.size() << " landless vanilla characters";
 }
@@ -385,7 +387,7 @@ void CK3::World::purgeLandlessVanillaCharacters() {
 
 void CK3::World::linkSpouses() {
 	auto counterSpouse = 0;
-	for (const auto& ck3Character : characters | std::views::values) {
+	for (const auto& ck3Character : getCharacters() | std::views::values) {
 		map<unsigned long long, shared_ptr<Character>> newSpouses;
 		// make links between Imperator characters
 		for (const auto& impSpouseCharacter : ck3Character->imperatorCharacter->getSpouses() | std::views::values) {
@@ -397,33 +399,34 @@ void CK3::World::linkSpouses() {
 			}
 		}
 	}
-	Log(LogLevel::Info) << "<> " << counterSpouse << " spouses linked in CK3.";
+	Log(LogLevel::Info) << "<> " << counterSpouse << " spouses from Imperator linked in CK3.";
 }
 
 
 void CK3::World::linkMothersAndFathers() {
 	auto counterMother = 0;
 	auto counterFather = 0;
-	for (const auto& ck3Character : characters | std::views::values) {
-		// make links between Imperator characters
-		const auto& impMotherCharacter = ck3Character->imperatorCharacter->getMother().second;
-		if (impMotherCharacter != nullptr) {
+	for (const auto& ck3Character : getCharacters() | std::views::values) {
+		if (const auto & impMotherCharacter = ck3Character->imperatorCharacter->getMother().second; impMotherCharacter) {
 			const auto& ck3MotherCharacter = impMotherCharacter->getCK3Character();
 			ck3Character->setMother(ck3MotherCharacter);
 			ck3MotherCharacter->addChild(ck3Character);
 			++counterMother;
 		}
 
-		// make links between Imperator characters
-		const auto& impFatherCharacter = ck3Character->imperatorCharacter->getFather().second;
-		if (impFatherCharacter != nullptr) {
+		if (const auto & impFatherCharacter = ck3Character->imperatorCharacter->getFather().second; impFatherCharacter) {
 			const auto& ck3FatherCharacter = impFatherCharacter->getCK3Character();
 			ck3Character->setFather(ck3FatherCharacter);
 			ck3FatherCharacter->addChild(ck3Character);
 			++counterFather;
 		}
 	}
-	Log(LogLevel::Info) << "<> " << counterMother << " mothers and " << counterFather << " fathers linked in CK3.";
+	Log(LogLevel::Info) << "<> " << counterMother << " mothers and " << counterFather << " fathers from Imperator linked in CK3.";
+}
+
+
+void CK3::World::importVanillaCharacters(const std::string& ck3Path) {
+	characters = Characters(ck3Path + "/game/history/characters");
 }
 
 

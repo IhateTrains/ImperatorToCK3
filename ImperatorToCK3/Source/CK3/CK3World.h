@@ -17,6 +17,7 @@
 #include "Mappers/RegionMapper/ImperatorRegionMapper.h"
 #include "Mappers/SuccessionLawMapper/SuccessionLawMapper.h"
 #include "Character/CK3Character.h"
+#include "Character/CK3Characters.h"
 #include "Dynasties/Dynasty.h"
 #include "Province/CK3Province.h"
 #include "Titles/LandedTitles.h"
@@ -40,16 +41,17 @@ class World {
 public:
 	World(const Imperator::World& impWorld, const Configuration& theConfiguration, const commonItems::ConverterVersion& converterVersion);
 
-	[[nodiscard]] const auto& getCharacters() const { return characters; }
+	[[nodiscard]] const auto& getCharacters() const { return characters.getCharacters(); }
 	[[nodiscard]] const auto& getDynasties() const { return dynasties; }
 	[[nodiscard]] const auto& getTitles() const { return landedTitles.getTitles(); }
 	[[nodiscard]] const auto& getProvinces() const { return provinces; }
 
 private:
 	void importImperatorCharacters(const Imperator::World& impWorld, bool ConvertBirthAndDeathDates, date endDate);
-	void importImperatorCharacter(const std::pair<unsigned long long, std::shared_ptr<Imperator::Character>>& character, bool ConvertBirthAndDeathDates, date endDate);
+	void importImperatorCharacter(const std::pair<unsigned long long, std::shared_ptr<Imperator::Character>>& impCharacter, bool ConvertBirthAndDeathDates, date endDate);
 	void linkSpouses();
 	void linkMothersAndFathers();
+	void importVanillaCharacters(const std::string& ck3Path);
 
 	void importImperatorFamilies(const Imperator::World& impWorld);
 	
@@ -69,8 +71,7 @@ private:
 	[[nodiscard]] std::optional<std::pair<unsigned long long, std::shared_ptr<Imperator::Province>>> determineProvinceSource(const std::vector<unsigned long long>& impProvinceNumbers,
 		const Imperator::World& impWorld) const;
 
-
-	std::map<std::string, std::shared_ptr<Character>> characters;
+	Characters characters;
 	std::map<std::string, std::shared_ptr<Dynasty>> dynasties;
 	LandedTitles landedTitles;
 	std::map<unsigned long long, std::shared_ptr<Province>> provinces;
@@ -89,7 +90,6 @@ private:
 	std::shared_ptr<mappers::CK3RegionMapper> ck3RegionMapper;
 	std::shared_ptr<mappers::ImperatorRegionMapper> imperatorRegionMapper;
 	TitlesHistory titlesHistory;
-
 
 	std::set<std::string> countyHoldersCache; // used by removeInvalidLandlessTitles
 };

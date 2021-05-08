@@ -29,6 +29,7 @@ namespace CK3 {
 class Dynasty;
 class Character {
   public:
+	class Factory;
 	Character() = default;
 	void initializeFromImperator(std::shared_ptr<Imperator::Character> impCharacter,
 								 const mappers::ReligionMapper& religionMapper,
@@ -52,6 +53,11 @@ class Character {
 	void removeMother();
 	void removeChild(const std::string& childID);
 	void setDynastyID(const std::string& dynID) { dynastyID = dynID; }
+
+	[[nodiscard]] const auto& getSpouses() const { return spouses; }
+	[[nodiscard]] const auto& getFather() const { return father; }
+	[[nodiscard]] const auto& getMother() const { return mother; }
+	[[nodiscard]] const auto& getChildren() const { return children; }
 
 	friend std::ostream& operator<<(std::ostream& output, const Character& character);
 
@@ -79,6 +85,13 @@ class Character {
 	std::map<std::string, std::shared_ptr<Character>> spouses;
 
 	std::optional<std::string> dynastyID;  // not always set
+
+	unsigned int martial = 0;
+	unsigned int diplomacy = 0;
+	unsigned int intrigue = 0;
+	unsigned int stewardship = 0;
+
+	std::optional<std::string> dnaKey;
 };
 
 }  // namespace CK3

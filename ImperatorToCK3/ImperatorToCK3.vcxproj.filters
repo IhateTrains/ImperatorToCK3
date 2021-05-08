@@ -412,6 +412,12 @@
     <ClInclude Include="Source\CommonUtilities\ContainerField.h">
       <Filter>CommonUtilities</Filter>
     </ClInclude>
+    <ClInclude Include="Source\CK3\Character\CK3CharacterFactory.h">
+      <Filter>CK3\Characters</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\CK3\Character\CK3Characters.h">
+      <Filter>CK3\Characters</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\main.cpp" />
@@ -706,6 +712,12 @@
     </ClCompile>
     <ClCompile Include="Source\CommonUtilities\ContainerField.cpp">
       <Filter>CommonUtilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\CK3\Character\CK3CharacterFactory.cpp">
+      <Filter>CK3\Characters</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\CK3\Character\CK3Characters.cpp">
+      <Filter>CK3\Characters</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
