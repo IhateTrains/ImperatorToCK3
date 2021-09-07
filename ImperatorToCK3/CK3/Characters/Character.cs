@@ -37,27 +37,44 @@ namespace ImperatorToCK3.CK3.Characters {
 			LocalizationMapper localizationMapper,
 			ProvinceMapper provinceMapper,   // used to determine ck3 province for religion mapper
 			DeathReasonMapper deathReasonMapper,
-			bool ConvertBirthAndDeathDates = true
-		) {
-			var dateOnConversion = new Date(867, 1, 1);
-			InitializeFromImperator(impCharacter, religionMapper, cultureMapper, traitMapper, nicknameMapper, localizationMapper, provinceMapper, deathReasonMapper, ConvertBirthAndDeathDates, dateOnConversion);
-		}
-		public void InitializeFromImperator(
-			Imperator.Characters.Character impCharacter,
-			ReligionMapper religionMapper,
-			CultureMapper cultureMapper,
-			TraitMapper traitMapper,
-			NicknameMapper nicknameMapper,
-			LocalizationMapper localizationMapper,
-			ProvinceMapper provinceMapper,   // used to determine ck3 province for religion mapper
-			DeathReasonMapper deathReasonMapper,
 			bool convertBirthAndDeathDates,
-			Date dateOnConversion
+			Date dateOnConversion,
+			Date ck3BookmarkDate
 		) {
 			ImperatorCharacter = impCharacter;
 			ImperatorCharacter.CK3Character = this;
 			ID = "imperator" + ImperatorCharacter.ID.ToString();
-			Name = ImperatorCharacter.Name;
+
+			if (!string.IsNullOrEmpty(ImperatorCharacter.CustomName)) {
+				var loc = ImperatorCharacter.CustomName;
+				Name = "IMPTOCK3_CUSTOM_NAME_" + loc.Replace(' ', '_');
+				Localizations.Add(Name, new LocBlock {
+					english = loc,
+					french = loc,
+					german = loc,
+					russian = loc,
+					simp_chinese = loc,
+					spanish = loc
+				});
+			} else {
+				Name = ImperatorCharacter.Name;
+				if (!string.IsNullOrEmpty(Name)) {
+					var impNameLoc = localizationMapper.GetLocBlockForKey(Name);
+					if (impNameLoc is not null) {
+						Localizations.Add(Name, impNameLoc);
+					} else {  // fallback: use unlocalized name as displayed name
+						Localizations.Add(Name, new LocBlock {
+							english = Name,
+							french = Name,
+							german = Name,
+							russian = Name,
+							simp_chinese = Name,
+							spanish = Name
+						});
+					}
+				}
+			}
+
 			Female = ImperatorCharacter.Female;
 			Age = ImperatorCharacter.Age;
 
@@ -109,22 +126,6 @@ namespace ImperatorToCK3.CK3.Characters {
 				Culture = match;
 			}
 
-			if (!string.IsNullOrEmpty(Name)) {
-				var impNameLoc = localizationMapper.GetLocBlockForKey(Name);
-				if (impNameLoc is not null) {
-					Localizations.Add(Name, impNameLoc);
-				} else {  // fallback: use unlocalized name as displayed name
-					Localizations.Add(Name, new LocBlock {
-						english = Name,
-						french = Name,
-						german = Name,
-						russian = Name,
-						simp_chinese = Name,
-						spanish = Name
-					});
-				}
-			}
-
 			foreach (var impTrait in ImperatorCharacter.Traits) {
 				var traitMatch = traitMapper.GetCK3TraitForImperatorTrait(impTrait);
 				if (traitMatch is not null) {
@@ -146,8 +147,8 @@ namespace ImperatorToCK3.CK3.Characters {
 				DeathReason = deathReasonMapper.GetCK3ReasonForImperatorReason(impDeathReason);
 			}
 			if (!convertBirthAndDeathDates) {  // if option to convert character age is chosen
-				BirthDate.AddYears((int)new Date(867, 1, 1).DiffInYears(dateOnConversion));
-				DeathDate?.AddYears((int)new Date(867, 1, 1).DiffInYears(dateOnConversion));
+				BirthDate.AddYears((int)ck3BookmarkDate.DiffInYears(dateOnConversion));
+				DeathDate?.AddYears((int)ck3BookmarkDate.DiffInYears(dateOnConversion));
 			}
 		}
 
