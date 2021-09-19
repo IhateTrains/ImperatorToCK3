@@ -3,7 +3,7 @@ using System;
 using commonItems;
 
 namespace ImperatorToCK3 {
-	public enum IMPERATOR_DE_JURE { REGIONS = 1, COUNTRIES = 2, NO = 3 };
+	public enum IMPERATOR_DE_JURE { REGIONS = 1, COUNTRIES = 2, NO = 3 }
 	public class Configuration : Parser {
 		public string SaveGamePath { get; internal set; } = "";
 		public string ImperatorPath { get; internal set; } = "";
@@ -12,7 +12,6 @@ namespace ImperatorToCK3 {
 		public string Ck3ModsPath { get; internal set; } = "";
 		public string OutputModName { get; internal set; } = "";
 		public IMPERATOR_DE_JURE ImperatorDeJure { get; internal set; } = IMPERATOR_DE_JURE.NO;
-		public bool ConvertBirthAndDeathDates { get; internal set; } = true;
 		public Date Ck3BookmarkDate { get; private set; } = new(867, 1, 1);
 
 		public Configuration(ConverterVersion converterVersion) {
@@ -56,11 +55,6 @@ namespace ImperatorToCK3 {
 				} catch (Exception e) {
 					Logger.Error("Undefined error, ImperatorDeJure value was: " + deJureString + "; Error message: " + e.ToString());
 				}
-			});
-			RegisterKeyword("ConvertCharacterBirthAndDeathDates", (sr) => {
-				var valStr = new SingleString(sr).String;
-				ConvertBirthAndDeathDates = valStr == "true";
-				Logger.Info("Conversion of characters' birth and death dates set to: " + ConvertBirthAndDeathDates);
 			});
 
 			RegisterKeyword("bookmark_date", reader => {

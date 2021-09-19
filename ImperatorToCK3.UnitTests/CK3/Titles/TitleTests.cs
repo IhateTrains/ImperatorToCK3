@@ -17,6 +17,7 @@ namespace ImperatorToCK3.UnitTests.CK3.Titles {
 			Assert.Null(title.Color);
 			Assert.Null(title.CapitalCounty);
 			Assert.Null(title.Province);
+			Assert.False(title.PlayerCountry);
 		}
 
 		[Fact]
@@ -68,14 +69,7 @@ namespace ImperatorToCK3.UnitTests.CK3.Titles {
 		public void HolderIdDefaultsTo0String() {
 			var title = new Title();
 
-			Assert.Equal("0", title.HolderID);
-		}
-
-		[Fact]
-		public void HolderPtrDefaultsToNull() {
-			var title = new Title();
-
-			Assert.Null(title.Holder);
+			Assert.Equal("0", title.GetHolderId(new Date(867,1,1)));
 		}
 
 		[Fact]
@@ -92,7 +86,7 @@ namespace ImperatorToCK3.UnitTests.CK3.Titles {
 			var title = new Title();
 			title.AddHistory(new LandedTitles(), history);
 
-			Assert.Equal("420", title.HolderID);
+			Assert.Equal("420", title.GetHolderId(new Date(867, 1, 1)));
 			Assert.Equal(20, title.DevelopmentLevel);
 		}
 

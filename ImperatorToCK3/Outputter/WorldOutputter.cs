@@ -65,11 +65,13 @@ namespace ImperatorToCK3.Outputter {
 			Logger.Info("Copying blankMod files to output.");
 			SystemUtils.TryCopyFolder("blankMod/output", outputPath);
 
-			Logger.Info("Setting bookmark date.");
-			var bookmarkPath = Path.Combine(outputPath, "common/bookmarks/00_bookmarks.txt");
-			string text = File.ReadAllText(bookmarkPath);
-			text = text.Replace("867.1.1", theConfiguration.Ck3BookmarkDate.ToString());
-			File.WriteAllText(bookmarkPath, text);
+			Logger.Info("Creating bookmark.");
+			BookmarkOutputter.OutputBookmark(
+				outputName,
+				ck3World.Characters,
+				ck3World.LandedTitles,
+				theConfiguration.Ck3BookmarkDate
+			);
 		}
 
 		private static void OutputModFile(string outputName) {
@@ -93,6 +95,8 @@ namespace ImperatorToCK3.Outputter {
 			SystemUtils.TryCreateFolder("output/" + outputName + "/history/provinces");
 			SystemUtils.TryCreateFolder("output/" + outputName + "/history/province_mapping");
 			SystemUtils.TryCreateFolder("output/" + outputName + "/common");
+			SystemUtils.TryCreateFolder("output/" + outputName + "/common/bookmarks");
+			SystemUtils.TryCreateFolder("output/" + outputName + "/common/bookmark_portraits");
 			SystemUtils.TryCreateFolder("output/" + outputName + "/common/coat_of_arms");
 			SystemUtils.TryCreateFolder("output/" + outputName + "/common/coat_of_arms/coat_of_arms");
 			SystemUtils.TryCreateFolder("output/" + outputName + "/common/dynasties");
