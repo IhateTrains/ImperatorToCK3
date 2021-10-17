@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
-using commonItems;
+﻿using commonItems;
 using ImperatorToCK3.Imperator.Families;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ImperatorToCK3.Imperator.Characters {
 	public class Character {
-		public Character(ulong ID) {
-			this.ID = ID;
+		public Character(ulong id) {
+			Id = id;
 		}
-		public ulong ID { get; } = 0;
+		public ulong Id { get; } = 0;
 		public KeyValuePair<ulong, Countries.Country?>? Country { get; set; }
 		private string culture = string.Empty;
 		public string Culture {
@@ -28,12 +29,13 @@ namespace ImperatorToCK3.Imperator.Characters {
 		public string Name { get; set; } = string.Empty;
 		public string? CustomName { get; set; }
 		public string Nickname { get; set; } = string.Empty;
-		public ulong ProvinceID { get; private set; } = 0;
+		public ulong ProvinceId { get; private set; } = 0;
 		public Date BirthDate { get; private set; } = new Date(1, 1, 1);
 		public Date? DeathDate { get; private set; }
 		public bool IsDead => DeathDate is not null;
 		public string? DeathReason { get; set; }
-		public Dictionary<ulong, Character?> Spouses { get; set; } = new();
+		private HashSet<ulong> parsedSpouseIds = new();
+		public Dictionary<ulong, Character> Spouses { get; set; } = new();
 		public Dictionary<ulong, Character?> Children { get; set; } = new();
 		public KeyValuePair<ulong, Character?> Mother { get; set; } = new();
 		public KeyValuePair<ulong, Character?> Father { get; set; } = new();
@@ -44,7 +46,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 			}
 			set {
 				if (value.Value is null) {
-					Logger.Warn($"Setting null family {value.Key} to character {ID}!");
+					Logger.Warn($"Setting null family {value.Key} to character {Id}!");
 				} else if (value.Value.ID != value.Key) {
 					Logger.Warn($"Setting family with ID mismatch: {value.Key} v. {value.Value.ID}!");
 				}
@@ -94,7 +96,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 				parsedCharacter.Country = new(ParserHelpers.GetULong(reader), null);
 			});
 			parser.RegisterKeyword("province", reader => {
-				parsedCharacter.ProvinceID = ParserHelpers.GetULong(reader);
+				parsedCharacter.ProvinceId = ParserHelpers.GetULong(reader);
 			});
 			parser.RegisterKeyword("culture", reader => {
 				parsedCharacter.culture = ParserHelpers.GetString(reader);
@@ -141,9 +143,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 				parsedCharacter.Wealth = ParserHelpers.GetDouble(reader);
 			});
 			parser.RegisterKeyword("spouse", reader => {
-				foreach (var spouse in ParserHelpers.GetULongs(reader)) {
-					parsedCharacter.Spouses.Add(spouse, null);
-				}
+				parsedCharacter.parsedSpouseIds = ParserHelpers.GetULongs(reader).ToHashSet();
 			});
 			parser.RegisterKeyword("children", reader => {
 				foreach (var child in ParserHelpers.GetULongs(reader)) {
@@ -169,6 +169,21 @@ namespace ImperatorToCK3.Imperator.Characters {
 			}
 
 			return parsedCharacter;
+		}
+
+		// Returns counter of linked spouses
+		public int LinkSpouses(Dictionary<ulong, Character> characters) {
+			var counter = 0;
+			foreach (var spouseId in parsedSpouseIds) {
+				if (characters.TryGetValue(spouseId, out var spouseToLink)) {
+					Spouses.Add(spouseToLink.Id, spouseToLink);
+					++counter;
+				} else {
+					Logger.Warn($"Spouse ID: {spouseId} has no definition!");
+				}
+			}
+
+			return counter;
 		}
 	}
 }
