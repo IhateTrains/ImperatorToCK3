@@ -102,7 +102,7 @@ namespace ImperatorToCK3.CK3 {
 		private void ImportImperatorCharacters(Imperator.World impWorld, Date endDate, Date ck3BookmarkDate) {
 			Logger.Info("Importing Imperator Characters...");
 
-			foreach (var character in impWorld.Characters.StoredCharacters.Values) {
+			foreach (var character in impWorld.Characters.StoredCharacters) {
 				ImportImperatorCharacter(character, endDate, ck3BookmarkDate);
 			}
 			Logger.Info($"{Characters.Count} total characters recognized.");
@@ -192,7 +192,6 @@ namespace ImperatorToCK3.CK3 {
 
 			var governorships = impWorld.Jobs.Governorships;
 			var imperatorCountries = impWorld.Countries.StoredCountries;
-			var imperatorCharacters = impWorld.Characters.StoredCharacters;
 
 			var governorshipsPerRegion = governorships.GroupBy(g => g.RegionName)
 				.ToDictionary(g => g.Key, g => g.Count());
@@ -204,7 +203,7 @@ namespace ImperatorToCK3.CK3 {
 				ImportImperatorGovernorship(
 					governorship,
 					imperatorCountries,
-					imperatorCharacters,
+					impWorld.Characters,
 					governorshipsPerRegion[governorship.RegionName] > 1
 				);
 				++counter;
@@ -214,7 +213,7 @@ namespace ImperatorToCK3.CK3 {
 		private void ImportImperatorGovernorship(
 			Governorship governorship,
 			Dictionary<ulong, Country> imperatorCountries,
-			Dictionary<ulong, Imperator.Characters.Character> imperatorCharacters,
+			Imperator.Characters.Characters imperatorCharacters,
 			bool regionHasMultipleGovernorships
 		) {
 			var country = imperatorCountries[governorship.CountryID];
@@ -374,7 +373,7 @@ namespace ImperatorToCK3.CK3 {
 				long provinceWeight = province.BuildingCount + province.GetPopCount();
 
 				if (provinceWeight > maxDev) {
-					toReturn = new(province.ID, province);
+					toReturn = new(province.Id, province);
 					maxDev = provinceWeight;
 				}
 			}
@@ -436,8 +435,8 @@ namespace ImperatorToCK3.CK3 {
 					var ck3CapitalCounty = ck3Country.CapitalCounty;
 					var impMonarch = impCountry.Monarch;
 					var matchingGovernorships = new List<Governorship>(governorships.Where(g =>
-						g.CountryID == impCountry.ID &&
-						g.RegionName == imperatorRegionMapper.GetParentRegionName(impProvince.ID)
+						g.CountryID == impCountry.Id &&
+						g.RegionName == imperatorRegionMapper.GetParentRegionName(impProvince.Id)
 					));
 
 					if (!ck3CapitalCounty.HasValue || ck3CapitalCounty.Value.Value is null) {
@@ -617,7 +616,7 @@ namespace ImperatorToCK3.CK3 {
 				}
 
 				var newDynasty = new Dynasty(family, localizationMapper);
-				Dynasties.Add(newDynasty.ID, newDynasty);
+				Dynasties.Add(newDynasty.Id, newDynasty);
 			}
 			Logger.Info($"{Dynasties.Count} total families imported.");
 		}

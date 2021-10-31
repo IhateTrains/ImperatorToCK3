@@ -1,114 +1,72 @@
 ﻿using commonItems;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 
 namespace ImperatorToCK3.Imperator.Characters {
-	public class Characters : Parser {
+	public class Characters {
 		public Characters() { }
 		public Characters(BufferedReader reader, Genes.GenesDB? genesDB) {
 			this.genesDB = genesDB;
-			RegisterKeys();
-			ParseStream(reader);
-			ClearRegisteredRules();
+			var parser = new Parser();
+			RegisterKeys(parser);
+			parser.ParseStream(reader);
 
 			Logger.Info("Linking Characters with Spouses...");
 			LinkSpouses();
 			Logger.Info("Linking Characters with Mothers and Fathers...");
 			LinkMothersAndFathers();
 		}
-		public Dictionary<ulong, Character> StoredCharacters { get; } = new();
+		private readonly Dictionary<ulong, Character> charactersDict = new();
+		public Dictionary<ulong, Character>.ValueCollection StoredCharacters => charactersDict.Values;
+
+		public void Add(Character character) {
+			charactersDict.Add(character.Id, character);
+		}
+		public bool TryGetCharacter(ulong characterId, [NotNullWhen(returnValue: true)] out Character? character) {
+			return charactersDict.TryGetValue(characterId, out character);
+		}
+		public Character this[ulong id] => charactersDict[id];
+
 		public void LinkFamilies(Families.Families families) {
-			var counter = 0;
 			var idsWithoutDefinition = new SortedSet<ulong>();
-
-			foreach (var (characterID, character) in StoredCharacters) {
-				var familyID = character.Family.Key;
-				if (families.StoredFamilies.TryGetValue(familyID, out var familyToLink)) {
-					if (familyToLink is null) {
-						Logger.Warn($"Cannot link null family {familyID} to character {characterID}.");
-						continue;
-					}
-					character.Family = new(familyID, familyToLink);
-					familyToLink.LinkMember(character);
-					++counter;
-				} else {
-					idsWithoutDefinition.Add(familyID);
-				}
-			}
-
+			var counter = charactersDict.Values.Count(character => character.LinkFamily(families, idsWithoutDefinition));
 			if (idsWithoutDefinition.Count > 0) {
-				var logBuilder = new StringBuilder();
-				logBuilder.Append("Families without definition:");
-				foreach (var id in idsWithoutDefinition) {
-					logBuilder.Append(' ');
-					logBuilder.Append(id);
-					logBuilder.Append(',');
-				}
-				Logger.Info(logBuilder.ToString()[0..^1]); // remove last comma
+				Logger.Info($"Families without definition: {string.Join(", ", idsWithoutDefinition)}");
 			}
 
 			Logger.Info($"{counter} families linked to characters.");
 		}
 		private void LinkSpouses() {
-			var spouseCounter = StoredCharacters.Values.Sum(character => character.LinkSpouses(StoredCharacters));
+			var spouseCounter = charactersDict.Values.Sum(character => character.LinkSpouses(charactersDict));
 			Logger.Info($"{spouseCounter} spouses linked.");
 		}
 
 		private void LinkMothersAndFathers() {
 			var motherCounter = 0;
 			var fatherCounter = 0;
-			foreach (var (characterID, character) in StoredCharacters) {
-				var motherID = character.Mother.Key;
-				if (motherID != 0) {
-					if (StoredCharacters.TryGetValue(motherID, out var motherToLink)) {
-						character.Mother = new(motherID, motherToLink);
-						motherToLink.Children[characterID] = character;
-						++motherCounter;
-					} else {
-						Logger.Warn($"Mother ID: {motherID} has no definition!");
-					}
+			foreach (var character in charactersDict.Values) {
+				if (character.LinkMother(this)) {
+					++motherCounter;
 				}
-
-				var fatherID = character.Father.Key;
-				if (fatherID != 0) {
-					if (StoredCharacters.TryGetValue(fatherID, out var fatherToLink)) {
-						character.Father = new(fatherID, fatherToLink);
-						fatherToLink.Children[characterID] = character;
-						++fatherCounter;
-					} else {
-						Logger.Warn($"Father ID: {fatherID} has no definition!");
-					}
+				if (character.LinkFather(this)) {
+					++fatherCounter;
 				}
 			}
 			Logger.Info($"{motherCounter} mothers and {fatherCounter} fathers linked.");
 		}
 
 		public void LinkCountries(Countries.Countries countries) {
-			var counter = 0;
-			foreach (var (characterId, character) in StoredCharacters) {
-				if (!character.Country.HasValue) {
-					Logger.Warn($"Character {characterId} has no country!");
-					continue;
-				}
-				var countryId = character.Country.Value.Key;
-				if (countries.StoredCountries.TryGetValue(countryId, out var countryToLink)) {
-					// link both ways
-					character.Country = new(countryId, countryToLink);
-					++counter;
-				} else {
-					Logger.Warn($"Country with ID {countryId} has no definition!");
-				}
-			}
+			var counter = charactersDict.Values.Count(character => character.LinkCountry(countries));
 			Logger.Info($"{counter} countries linked to characters.");
 		}
 
-		private void RegisterKeys() {
-			RegisterRegex(CommonRegexes.Integer, (reader, charIdStr) => {
+		private void RegisterKeys(Parser parser) {
+			parser.RegisterRegex(CommonRegexes.Integer, (reader, charIdStr) => {
 				var newCharacter = Character.Parse(reader, charIdStr, genesDB);
-				StoredCharacters.Add(newCharacter.Id, newCharacter);
+				Add(newCharacter);
 			});
-			RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
+			parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
 		}
 		private readonly Genes.GenesDB? genesDB;
 

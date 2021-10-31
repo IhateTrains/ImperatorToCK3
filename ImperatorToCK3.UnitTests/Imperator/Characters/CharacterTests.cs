@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using commonItems;
+﻿using commonItems;
+using System.Collections.Generic;
 using Xunit;
 
 namespace ImperatorToCK3.UnitTests.Imperator.Characters {
@@ -19,7 +19,7 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 				"\tbirth_date=408.6.28" + // will be converted to AD date on loading
 				"\tdeath_date=408.6.28" + // will be converted to AD date on loading
 				"\tdeath = killed_in_battle" +
-				"\tspouse= { 69 420 } " +
+				"\tspouse= { 3 4 } " +
 				"\tchildren = { 69 420 } " +
 				"\tmother=123" +
 				"\tfather=124" +
@@ -40,12 +40,19 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			var spouse1Reader = new BufferedReader(string.Empty);
 			var spouse2Reader = new BufferedReader(string.Empty);
 			character.Spouses = new() {
-				{ 69, ImperatorToCK3.Imperator.Characters.Character.Parse(spouse1Reader, "69", genesDB) },
-				{ 420, ImperatorToCK3.Imperator.Characters.Character.Parse(spouse2Reader, "420", genesDB) }
+				{ 3, ImperatorToCK3.Imperator.Characters.Character.Parse(spouse1Reader, "3", genesDB) },
+				{ 4, ImperatorToCK3.Imperator.Characters.Character.Parse(spouse2Reader, "4", genesDB) }
 			};
 
 			Assert.Equal((ulong)42, character.Id);
-			Assert.Equal((ulong)69, character.Country.Value.Key);
+
+			Assert.Null(character.Country); // we have a country id, but no linked country yet
+			var countriesReader = new BufferedReader("={ 69={} }");
+			var countries = new ImperatorToCK3.Imperator.Countries.Countries(countriesReader);
+			character.LinkCountry(countries);
+			Assert.NotNull(character.Country);
+			Assert.Equal((ulong)69, character.Country.Id);
+
 			Assert.Equal("paradoxian", character.Culture);
 			Assert.Equal("orthodox", character.Religion);
 			Assert.True(character.Female);
@@ -59,14 +66,25 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			Assert.Equal("killed_in_battle", character.DeathReason);
 			Assert.Collection(character.Spouses,
 				item => {
-					Assert.Equal((ulong)69, item.Key);
-					Assert.Equal((ulong)69, item.Value.Id);
+					Assert.Equal((ulong)3, item.Key);
+					Assert.Equal((ulong)3, item.Value.Id);
 				},
 				item => {
-					Assert.Equal((ulong)420, item.Key);
-					Assert.Equal((ulong)420, item.Value.Id);
+					Assert.Equal((ulong)4, item.Key);
+					Assert.Equal((ulong)4, item.Value.Id);
 				}
 			);
+
+			Assert.Empty(character.Children); // children not linked yet
+			var characters = new ImperatorToCK3.Imperator.Characters.Characters();
+			characters.Add(character);
+			var child1 = ImperatorToCK3.Imperator.Characters.Character.Parse(new BufferedReader("={ mother=42 }"), "69", null);
+			var child2 = ImperatorToCK3.Imperator.Characters.Character.Parse(new BufferedReader("={ mother=42 }"), "420", null);
+			characters.Add(child1);
+			characters.Add(child2);
+			child1.LinkMother(characters);
+			child2.LinkMother(characters);
+
 			Assert.Collection(character.Children,
 				item => {
 					Assert.Equal((ulong)69, item.Key);
@@ -77,7 +95,7 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			);
 			Assert.Equal((ulong)123, character.Mother.Key);
 			Assert.Equal((ulong)124, character.Father.Key);
-			Assert.Equal((ulong)125, character.Family.Key);
+			Assert.Null(character.Family); // Despite "family=125" in character definition, Family is null until linked.
 			Assert.Equal(420.5, character.Wealth);
 			Assert.Equal("Biggus_Dickus", character.Name);
 			Assert.Equal("CUSTOM NAME", character.CustomName);
@@ -106,11 +124,11 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			Assert.Empty(character.Children);
 			Assert.Equal((ulong)0, character.Mother.Key);
 			Assert.Equal((ulong)0, character.Father.Key);
-			Assert.Equal((ulong)0, character.Family.Key);
+			Assert.Null(character.Family);
 			Assert.Equal(0, character.Wealth);
 			Assert.Equal(string.Empty, character.Name);
 			Assert.Null(character.CustomName);
-			Assert.Equal(string.Empty, character.Nickname);
+			Assert.Null(character.Nickname);
 			Assert.Equal(0, character.Attributes.Martial);
 			Assert.Equal(0, character.Attributes.Finesse);
 			Assert.Equal(0, character.Attributes.Charisma);
@@ -130,7 +148,7 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			);
 			var family = ImperatorToCK3.Imperator.Families.Family.Parse(familyReader, 42);
 			var character = ImperatorToCK3.Imperator.Characters.Character.Parse(characterReader, "69", genesDB);
-			character.Family = new(42, family);
+			character.Family = family;
 			Assert.Equal("paradoxian", character.Culture);
 		}
 
@@ -149,6 +167,7 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 			);
 			var character = ImperatorToCK3.Imperator.Characters.Character.Parse(reader, "42", genesDB);
 
+			Assert.NotNull(character.PortraitData);
 			Assert.Equal((uint)0, character.PortraitData.HairColorPaletteCoordinates.x);
 			Assert.Equal((uint)0, character.PortraitData.HairColorPaletteCoordinates.y);
 			Assert.Equal((uint)0, character.PortraitData.SkinColorPaletteCoordinates.x);
@@ -160,30 +179,26 @@ namespace ImperatorToCK3.UnitTests.Imperator.Characters {
 		[Fact]
 		public void AgeSexReturnsCorrectString() {
 			var reader1 = new BufferedReader(
-				"=\n" +
-			"{\n" +
-			"\tage=56\n" +
-			"\tfemale=yes\n" +
-			"}"
+				"= {\n" +
+				"\tage=56\n" +
+				"\tfemale=yes\n" +
+				"}"
 			);
 			var reader2 = new BufferedReader(
-				"=\n" +
-			"{\n" +
-			"\tage=56\n" +
-			"}"
+				"= {\n" +
+				"\tage=56\n" +
+				"}"
 			);
 			var reader3 = new BufferedReader(
-				"=\n" +
-			"{\n" +
-			"\tage=8\n" +
-			 "\tfemale=yes\n" +
-			 "}"
+				"= {\n" +
+				"\tage=8\n" +
+				"\tfemale=yes\n" +
+				"}"
 			);
 			var reader4 = new BufferedReader(
-				 "=\n" +
-			"{\n" +
-			 "\tage=8\n" +
-			 "}"
+				"= {\n" +
+				"\tage=8\n" +
+				"}"
 			);
 			var character1 = ImperatorToCK3.Imperator.Characters.Character.Parse(reader1, "42", genesDB);
 			var character2 = ImperatorToCK3.Imperator.Characters.Character.Parse(reader2, "43", genesDB);
