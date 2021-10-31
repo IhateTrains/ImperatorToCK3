@@ -39,7 +39,7 @@ namespace ImperatorToCK3.Outputter {
 				output.WriteLine($"\t\tdynasty = {holder.DynastyID}");
 				output.WriteLine("\t\tdynasty_splendor_level = 1");
 				output.WriteLine($"\t\ttype = {holder.AgeSex}");
-				output.WriteLine($"\t\thistory_id = {holder.ID}");
+				output.WriteLine($"\t\thistory_id = {holder.Id}");
 				output.WriteLine($"\t\tbirth = {holder.BirthDate}");
 				output.WriteLine($"\t\ttitle = {title.Name}");
 				var gov = title.GetGovernment(config.Ck3BookmarkDate);

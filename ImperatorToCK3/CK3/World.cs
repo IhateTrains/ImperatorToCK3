@@ -127,7 +127,7 @@ namespace ImperatorToCK3.CK3 {
 				ck3BookmarkDate
 			);
 			character.CK3Character = newCharacter;
-			Characters.Add(newCharacter.ID, newCharacter);
+			Characters.Add(newCharacter.Id, newCharacter);
 		}
 
 		private void ImportImperatorCountries(Dictionary<ulong, Country> imperatorCountries) {
@@ -473,7 +473,7 @@ namespace ImperatorToCK3.CK3 {
 				var holderId = "imperator" + impMonarch.ToString();
 				if (Characters.TryGetValue(holderId, out var holder)) {
 					title.ClearHolderSpecificHistory();
-					title.SetHolderId(holder.ID, ck3Country.GetDateOfLastHolderChange());
+					title.SetHolderId(holder.Id, ck3Country.GetDateOfLastHolderChange());
 				} else {
 					Logger.Warn($"Holder {holderId} of county {title.Name} doesn't exist!");
 				}
@@ -486,7 +486,7 @@ namespace ImperatorToCK3.CK3 {
 				if (Characters.TryGetValue(holderId, out var governor)) {
 					title.ClearHolderSpecificHistory();
 					var date = ck3Governorship.GetDateOfLastHolderChange();
-					title.SetHolderId(governor.ID, date);
+					title.SetHolderId(governor.Id, date);
 				} else {
 					Logger.Warn($"Holder {holderId} of county {title.Name} doesn't exist!");
 				}
@@ -569,8 +569,8 @@ namespace ImperatorToCK3.CK3 {
 						Logger.Warn($"Imperator spouse {impSpouseCharacter.Id} has no CK3 character!");
 						continue;
 					}
-					ck3Character.Spouses[ck3SpouseCharacter.ID] = ck3SpouseCharacter;
-					ck3SpouseCharacter.Spouses[ck3Character.ID] = ck3Character;
+					ck3Character.Spouses[ck3SpouseCharacter.Id] = ck3SpouseCharacter;
+					ck3SpouseCharacter.Spouses[ck3Character.Id] = ck3Character;
 					++spouseCounter;
 				}
 			}
@@ -590,7 +590,7 @@ namespace ImperatorToCK3.CK3 {
 				if (impMotherCharacter is not null) {
 					var ck3MotherCharacter = impMotherCharacter.CK3Character;
 					ck3Character.Mother = ck3MotherCharacter;
-					ck3MotherCharacter.Children[ck3Character.ID] = ck3Character;
+					ck3MotherCharacter.Children[ck3Character.Id] = ck3Character;
 					++motherCounter;
 				}
 
@@ -599,7 +599,7 @@ namespace ImperatorToCK3.CK3 {
 				if (impFatherCharacter is not null) {
 					var ck3FatherCharacter = impFatherCharacter.CK3Character;
 					ck3Character.Father = ck3FatherCharacter;
-					ck3FatherCharacter.Children[ck3Character.ID] = ck3Character;
+					ck3FatherCharacter.Children[ck3Character.Id] = ck3Character;
 					++fatherCounter;
 				}
 			}

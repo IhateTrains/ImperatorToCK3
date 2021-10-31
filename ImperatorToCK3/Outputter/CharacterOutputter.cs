@@ -6,7 +6,7 @@ namespace ImperatorToCK3.Outputter {
 	public static class CharacterOutputter {
 		public static void OutputCharacter(StreamWriter output, Character character, Date ck3BookmarkDate) {
 			// output ID, name, sex, culture, religion
-			output.WriteLine($"{character.ID} = {{");
+			output.WriteLine($"{character.Id} = {{");
 			if (!string.IsNullOrEmpty(character.Name)) {
 				output.WriteLine($"\tname = \"{character.Name}\"\n");
 			}
@@ -27,9 +27,9 @@ namespace ImperatorToCK3.Outputter {
 
 			//output father and mother
 			if (character.Father is not null)
-				output.WriteLine($"\tfather = {character.Father.ID}");
+				output.WriteLine($"\tfather = {character.Father.Id}");
 			if (character.Mother is not null)
-				output.WriteLine($"\tmother = {character.Mother.ID}");
+				output.WriteLine($"\tmother = {character.Mother.Id}");
 
 			// output spouse
 			// TODO: output add_spouse with earlier date if the pair has a born or unborn child

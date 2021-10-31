@@ -45,8 +45,8 @@ namespace ImperatorToCK3.CK3.Titles {
 					nicknameMapper,
 					provinceMapper
 				);
-				charactersDict.Add(character.ID, character);
-				CharacterId = character.ID;
+				charactersDict.Add(character.Id, character);
+				CharacterId = character.Id;
 			}
 		}
 	}
