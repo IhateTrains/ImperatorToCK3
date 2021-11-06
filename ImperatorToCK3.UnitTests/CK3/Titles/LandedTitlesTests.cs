@@ -1,5 +1,5 @@
-﻿using ImperatorToCK3.CK3.Titles;
-using commonItems;
+﻿using commonItems;
+using ImperatorToCK3.CK3.Titles;
 using Xunit;
 
 namespace ImperatorToCK3.UnitTests.CK3.Titles {
@@ -107,9 +107,9 @@ namespace ImperatorToCK3.UnitTests.CK3.Titles {
 
 			var empire = titles.StoredTitles["e_empire"];
 			var capitalCounty = empire.CapitalCounty;
-			Assert.True(capitalCounty.HasValue);
-			Assert.Equal("c_county", capitalCounty.Value.Key);
-			Assert.Equal("c_county", capitalCounty.Value.Value.Name);
+			Assert.NotNull(capitalCounty);
+			Assert.Equal("c_county", capitalCounty.Name);
+			Assert.Equal("c_county", empire.CapitalCountyName);
 		}
 	}
 }
