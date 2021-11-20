@@ -1,4 +1,5 @@
 ﻿using commonItems;
+using ImperatorToCK3.Imperator.Countries;
 using ImperatorToCK3.Imperator.Families;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,12 @@ namespace ImperatorToCK3.Imperator.Characters {
 			Id = id;
 		}
 		public ulong Id { get; } = 0;
+
 		private ulong? parsedCountryId;
-		public Countries.Country? Country { get; set; }
+		public Country? Country { get; set; }
+		private ulong? parsedPrisonerHomeId;
+		public Country? PrisonerHome { get; private set; }
+
 		private string culture = string.Empty;
 		public string Culture {
 			get {
@@ -34,7 +39,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 				return false;
 			}
 			var familyId = (ulong)parsedFamilyId;
-			if (families.StoredFamilies.TryGetValue(familyId, out var familyToLink)) {
+			if (families.TryGetValue(familyId, out var familyToLink)) {
 				Family = familyToLink;
 				familyToLink.LinkMember(this);
 				return true;
@@ -46,7 +51,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 
 		public string? Nickname { get; set; }
 		public ulong ProvinceId { get; private set; } = 0;
-		public Date BirthDate { get; private set; } = new Date(1, 1, 1);
+		public Date BirthDate { get; private set; } = new(1, 1, 1);
 		public Date? DeathDate { get; private set; }
 		public bool IsDead => DeathDate is not null;
 		public string? DeathReason { get; set; }
@@ -75,15 +80,9 @@ namespace ImperatorToCK3.Imperator.Characters {
 		public string AgeSex {
 			get {
 				if (Age >= 16) {
-					if (Female) {
-						return "female";
-					}
-					return "male";
+					return Female ? "female" : "male";
 				}
-				if (Female) {
-					return "girl";
-				}
-				return "boy";
+				return Female ? "girl" : "boy";
 			}
 		}
 		public ParadoxBool Female { get; private set; } = new(false);
@@ -165,6 +164,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 			parser.RegisterKeyword("attributes", reader => {
 				parsedCharacter.Attributes = CharacterAttributes.Parse(reader);
 			});
+			parser.RegisterKeyword("prisoner_home", reader => parsedCharacter.parsedPrisonerHomeId = ParserHelpers.GetULong(reader));
 			parser.RegisterRegex(CommonRegexes.Catchall, (reader, token) => {
 				IgnoredTokens.Add(token);
 				ParserHelpers.IgnoreItem(reader);
@@ -214,6 +214,20 @@ namespace ImperatorToCK3.Imperator.Characters {
 			return false;
 		}
 
+		// Returns whether a country was linked
+		public bool LinkPrisonerHome(Countries.Countries countries) {
+			if (parsedPrisonerHomeId is null) {
+				return false;
+			}
+			var prisonerHomeId = (ulong)parsedPrisonerHomeId;
+			if (countries.StoredCountries.TryGetValue(prisonerHomeId, out var countryToLink)) {
+				PrisonerHome = countryToLink;
+				return true;
+			}
+			Logger.Warn($"Country with ID {prisonerHomeId} has no definition!");
+			return false;
+		}
+
 		// Returns whether a mother was linked
 		public bool LinkMother(Characters characters) {
 			var motherId = Mother.Key;
@@ -221,7 +235,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 				return false;
 			}
 
-			if (characters.TryGetCharacter(motherId, out var motherToLink)) {
+			if (characters.TryGetValue(motherId, out var motherToLink)) {
 				Mother = new(motherId, motherToLink);
 				if (!motherToLink.parsedChildrenIds.Contains(Id)) {
 					Logger.Warn($"Only one-sided link found between character {Id} and mother {motherId}!");
@@ -240,7 +254,7 @@ namespace ImperatorToCK3.Imperator.Characters {
 				return false;
 			}
 
-			if (characters.TryGetCharacter(fatherId, out var fatherToLink)) {
+			if (characters.TryGetValue(fatherId, out var fatherToLink)) {
 				Father = new(fatherId, fatherToLink);
 				if (!fatherToLink.parsedChildrenIds.Contains(Id)) {
 					Logger.Warn($"Only one-sided link found between character {Id} and father {fatherId}!");

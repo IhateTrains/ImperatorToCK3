@@ -463,10 +463,8 @@ namespace ImperatorToCK3.CK3.Titles {
 		}
 		public void AddHistory(LandedTitles landedTitles, TitleHistory titleHistory) {
 			history = titleHistory;
-			if (history.Liege is not null) {
-				if (landedTitles.StoredTitles.TryGetValue(history.Liege, out var liege)) {
-					DeFactoLiege = liege;
-				}
+			if (history.Liege is not null && landedTitles.TryGetValue(history.Liege, out var liege)) {
+				DeFactoLiege = liege;
 			}
 		}
 
@@ -672,7 +670,7 @@ namespace ImperatorToCK3.CK3.Titles {
 			}
 		}
 
-		public void OutputHistory(StreamWriter writer, Date ck3BookmarkDate) {
+		public void OutputHistory(StreamWriter writer, Date conversionDate) {
 			bool needsToBeOutput = false;
 			var sb = new StringBuilder();
 
@@ -698,7 +696,7 @@ namespace ImperatorToCK3.CK3.Titles {
 				}
 			}
 
-			sb.AppendLine($"\t{ck3BookmarkDate} = {{");
+			sb.AppendLine($"\t{conversionDate}={{");
 
 			if (DeFactoLiege is not null) {
 				needsToBeOutput = true;
@@ -789,5 +787,9 @@ namespace ImperatorToCK3.CK3.Titles {
 
 		// used by barony titles only
 		[SerializedName("province")] public ulong? Province { get; private set; } // province is area on map. b_ barony is its corresponding title.
+
+		public void RemoveHistoryPastBookmarkDate(Date ck3BookmarkDate) {
+			history.RemoveHistoryPastBookmarkDate(ck3BookmarkDate);
+		}
 	}
 }
