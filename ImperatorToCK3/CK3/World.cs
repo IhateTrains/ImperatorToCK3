@@ -1,4 +1,5 @@
 ﻿using commonItems;
+using ImperatorToCK3.CK3.Characters;
 using ImperatorToCK3.CK3.Dynasties;
 using ImperatorToCK3.CK3.Provinces;
 using ImperatorToCK3.CK3.Titles;
@@ -58,7 +59,7 @@ namespace ImperatorToCK3.CK3 {
 			religionMapper.LoadRegionMappers(imperatorRegionMapper, ck3RegionMapper);
 			cultureMapper.LoadRegionMappers(imperatorRegionMapper, ck3RegionMapper);
 
-			ImportImperatorCountries(impWorld.Countries.StoredCountries);
+			ImportImperatorCountries(impWorld.Countries);
 			ImportImperatorGovernorships(impWorld);
 
 			// Now we can deal with provinces since we know to whom to assign them. We first import vanilla province data.
@@ -88,6 +89,7 @@ namespace ImperatorToCK3.CK3 {
 			RemoveInvalidLandlessTitles(theConfiguration.Ck3BookmarkDate);
 
 			Characters.PurgeLandlessVanillaCharacters(LandedTitles, theConfiguration.Ck3BookmarkDate);
+			Characters.RemoveEmployerIdFromLandedCharacters(LandedTitles, impWorld.EndDate);
 		}
 
 		private void ClearFeaturedCharactersDescriptions(Date ck3BookmarkDate) {
@@ -165,7 +167,7 @@ namespace ImperatorToCK3.CK3 {
 			Logger.Info("Importing Imperator Governorships.");
 
 			var governorships = impWorld.Jobs.Governorships;
-			var imperatorCountries = impWorld.Countries.StoredCountries;
+			var imperatorCountries = impWorld.Countries;
 
 			var governorshipsPerRegion = governorships.GroupBy(g => g.RegionName)
 				.ToDictionary(g => g.Key, g => g.Count());
@@ -236,7 +238,7 @@ namespace ImperatorToCK3.CK3 {
 				var provincesPath = Path.Combine(ck3Path, "game/history/provinces", fileName);
 				try {
 					var newProvinces = new Provinces.Provinces(provincesPath, ck3BookmarkDate);
-					foreach (var (newProvinceId, newProvince) in newProvinces.StoredProvinces) {
+					foreach (var (newProvinceId, newProvince) in newProvinces) {
 						if (Provinces.ContainsKey(newProvinceId)) {
 							Logger.Warn($"Vanilla province duplication - {newProvinceId} already loaded! Overwriting.");
 						}
@@ -258,8 +260,8 @@ namespace ImperatorToCK3.CK3 {
 
 				var provinceMappingsPath = Path.Combine(ck3Path, "game/history/province_mapping", fileName);
 				try {
-					var newProvinces = new ProvinceMappings(provinceMappingsPath);
-					foreach (var (newProvinceId, baseProvinceId) in newProvinces.Mappings) {
+					var newMappings = new ProvinceMappings(provinceMappingsPath);
+					foreach (var (newProvinceId, baseProvinceId) in newMappings) {
 						if (!Provinces.ContainsKey(baseProvinceId)) {
 							Logger.Warn($"Base province {baseProvinceId} not found for province {newProvinceId}.");
 							continue;
