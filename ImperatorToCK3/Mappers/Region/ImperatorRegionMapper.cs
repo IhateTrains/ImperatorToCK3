@@ -1,5 +1,6 @@
 ﻿using commonItems;
 using commonItems.Collections;
+using System.Collections.Generic;
 using System.IO;
 
 namespace ImperatorToCK3.Mappers.Region {
@@ -8,37 +9,29 @@ namespace ImperatorToCK3.Mappers.Region {
 		private readonly IdObjectCollection<string, ImperatorArea> areas = new();
 
 		public ImperatorRegionMapper() { }
-		public ImperatorRegionMapper(string imperatorPath) {
-			Logger.Info("Initializing Imperator Geography");
-			var areaFilePath = Path.Combine(imperatorPath, "game/map_data/areas.txt");
-			var regionFilePath = Path.Combine(imperatorPath, "game/map_data/regions.txt");
-			using var areaFileStream = new FileStream(areaFilePath, FileMode.Open);
-			using var regionFileStream = new FileStream(regionFilePath, FileMode.Open);
-			var areaReader = new BufferedReader(areaFileStream);
-			var regionReader = new BufferedReader(regionFileStream);
-			Parser.AbsorbBOM(areaReader);
-			Parser.AbsorbBOM(regionReader);
-			LoadRegions(areaReader, regionReader);
-		}
-		private void RegisterRegionKeys(Parser parser) {
-			parser.RegisterRegex(CommonRegexes.String, (reader, regionName) => regions.Add(new ImperatorRegion(regionName, reader)));
-			parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
-		}
-		private void RegisterAreaKeys(Parser parser) {
-			parser.RegisterRegex(CommonRegexes.String, (reader, areaName) => areas.Add(new ImperatorArea(areaName, reader)));
-			parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
-		}
-		public void LoadRegions(BufferedReader areaReader, BufferedReader regionReader) {
-			var parser = new Parser();
-			RegisterAreaKeys(parser);
-			parser.ParseStream(areaReader);
-			parser.ClearRegisteredRules();
+		public ImperatorRegionMapper(string imperatorPath, IEnumerable<Mod> mods) {
+			Logger.Info("Initializing Imperator Geography...");
 
+			var parser = new Parser();
+
+			RegisterAreaKeys(parser);
+			parser.ParseGameFile(Path.Combine("map_data", "areas.txt"), imperatorPath, mods);
+
+			parser.ClearRegisteredRules();
 			RegisterRegionKeys(parser);
-			parser.ParseStream(regionReader);
+			parser.ParseGameFile(Path.Combine("map_data", "regions.txt"), imperatorPath, mods);
 
 			LinkRegions();
 		}
+		private void RegisterRegionKeys(Parser parser) {
+			parser.RegisterRegex(CommonRegexes.String, (reader, regionName) => regions.AddOrReplace(new(regionName, reader)));
+			parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
+		}
+		private void RegisterAreaKeys(Parser parser) {
+			parser.RegisterRegex(CommonRegexes.String, (reader, areaName) => areas.AddOrReplace(new(areaName, reader)));
+			parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
+		}
+
 		public bool ProvinceIsInRegion(ulong provinceId, string regionName) {
 			if (regions.TryGetValue(regionName, out var region)) {
 				return region.ContainsProvince(provinceId);
