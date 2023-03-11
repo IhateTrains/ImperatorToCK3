@@ -23,18 +23,25 @@ public class RulerTerm {
 		ReligionMapper religionMapper,
 		CultureMapper cultureMapper,
 		NicknameMapper nicknameMapper,
-		ProvinceMapper provinceMapper
+		ProvinceMapper provinceMapper,
+		Configuration config
 	) {
 		if (imperatorRulerTerm.CharacterId is not null) {
 			CharacterId = $"imperator{imperatorRulerTerm.CharacterId}";
 		}
 		StartDate = imperatorRulerTerm.StartDate;
 		if (imperatorRulerTerm.Government is not null) {
-			Government = governmentMapper.GetCK3GovernmentForImperatorGovernment(imperatorRulerTerm.Government);
+			Government = governmentMapper.GetCK3GovernmentForImperatorGovernment(imperatorRulerTerm.Government, null);
 		}
 
 		PreImperatorRuler = imperatorRulerTerm.PreImperatorRuler;
-		if (PreImperatorRuler?.Country is not null) {
+		if (PreImperatorRuler?.BirthDate is null) {
+			return;
+		}
+		if (PreImperatorRuler.DeathDate is null) {
+			return;
+		}
+		if (PreImperatorRuler.Country is not null) {
 			// create a new ruler character
 			var character = new Character(
 				PreImperatorRuler,
@@ -44,7 +51,8 @@ public class RulerTerm {
 				religionMapper,
 				cultureMapper,
 				nicknameMapper,
-				provinceMapper
+				provinceMapper,
+				config
 			);
 			characters.Add(character);
 			CharacterId = character.Id;

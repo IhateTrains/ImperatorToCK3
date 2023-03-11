@@ -1,4 +1,5 @@
 ﻿using commonItems;
+using commonItems.Mods;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using System;
@@ -12,6 +13,7 @@ public class MapData {
 	private struct Point : IEquatable<Point> {
 		public int X { get; set; }
 		public int Y { get; set; }
+
 		public Point(int x, int y) {
 			X = x;
 			Y = y;
@@ -20,29 +22,49 @@ public class MapData {
 		public bool Equals(Point other) {
 			return X == other.X && Y == other.Y;
 		}
+
+		public override bool Equals(object? obj) {
+			return obj is Point point && Equals(point);
+		}
+
+		public override int GetHashCode() {
+			return HashCode.Combine(X, Y);
+		}
 	}
+
 	public SortedDictionary<ulong, HashSet<ulong>> NeighborsDict { get; } = new();
 	public HashSet<ulong> ColorableImpassableProvinces { get; } = new();
 	public Dictionary<ulong, ProvincePosition> ProvincePositions { get; } = new();
 	public ProvinceDefinitions ProvinceDefinitions { get; }
-	public MapData(string ck3Path) {
-		string provincesMapPath = Path.Combine(ck3Path, "game", "map_data", "provinces.png");
-		Logger.Info("Loaded provinces map.");
 
-		ProvinceDefinitions = new ProvinceDefinitions(ck3Path);
-		Logger.Info("Loaded province definitions.");
-		DetermineProvincePositions(ck3Path);
-		Logger.Info("Loaded province positions.");
+	public MapData(ModFilesystem ck3ModFS) {
+		const string mapPath = "map_data/provinces.png";
+		var provincesMapPath = ck3ModFS.GetActualFileLocation(mapPath);
+		if (provincesMapPath is null) {
+			throw new FileNotFoundException($"{nameof(provincesMapPath)} not found!");
+		}
+
+		Logger.Info("Loading province definitions...");
+		ProvinceDefinitions = new ProvinceDefinitions(ck3ModFS);
+		Logger.IncrementProgress();
+
+		Logger.Info("Loading province positions...");
+		DetermineProvincePositions(ck3ModFS);
+		Logger.IncrementProgress();
+
+		Logger.Info("Determining province neighbors...");
 		using (Image<Rgb24> provincesMap = Image.Load<Rgb24>(provincesMapPath)) {
 			DetermineNeighbors(provincesMap, ProvinceDefinitions);
 		}
-		Logger.Info("Determined province neighbors.");
-		FindImpassables(ck3Path);
-		Logger.Info("Found impassables.");
+		Logger.IncrementProgress();
+
+		Logger.Info("Finding impassables...");
+		FindImpassables(ck3ModFS);
+		Logger.IncrementProgress();
 	}
 
-	private void DetermineProvincePositions(string ck3Path) {
-		var provincePositionsPath = Path.Combine(ck3Path, "game", "gfx", "map", "map_object_data", "building_locators.txt");
+	private void DetermineProvincePositions(ModFilesystem ck3ModFS) {
+		const string provincePositionsPath = "gfx/map/map_object_data/building_locators.txt";
 		var fileParser = new Parser();
 		fileParser.RegisterKeyword("game_object_locator", reader => {
 			var listParser = new Parser();
@@ -53,11 +75,11 @@ public class MapData {
 					ProvincePositions[instance.Id] = instance;
 				}
 			});
-			listParser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreItem);
+			listParser.IgnoreUnregisteredItems();
 			listParser.ParseStream(reader);
 		});
-		fileParser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreItem);
-		fileParser.ParseFile(provincePositionsPath);
+		fileParser.IgnoreUnregisteredItems();
+		fileParser.ParseGameFile(provincePositionsPath, ck3ModFS);
 	}
 
 	private void DetermineNeighbors(Image<Rgb24> provincesMap, ProvinceDefinitions provinceDefinitions) {
@@ -76,71 +98,88 @@ public class MapData {
 				if (!centerColor.Equals(aboveColor)) {
 					HandleNeighbor(centerColor, aboveColor, provinceDefinitions);
 				}
+
 				if (!centerColor.Equals(rightColor)) {
 					HandleNeighbor(centerColor, rightColor, provinceDefinitions);
 				}
+
 				if (!centerColor.Equals(belowColor)) {
 					HandleNeighbor(centerColor, belowColor, provinceDefinitions);
 				}
+
 				if (!centerColor.Equals(leftColor)) {
 					HandleNeighbor(centerColor, leftColor, provinceDefinitions);
 				}
 			}
 		}
 	}
-	private void FindImpassables(string ck3Path) {
-		var filePath = Path.Combine(ck3Path, "game", "map_data", "default.map");
+
+	private void FindImpassables(ModFilesystem ck3ModFS) {
+		var filePath = Path.Combine("map_data", "default.map");
 		var parser = new Parser();
 		const string listRegex = "sea_zones|river_provinces|lakes|impassable_mountains|impassable_seas";
 		parser.RegisterRegex(listRegex, (reader, keyword) => {
 			Parser.GetNextTokenWithoutMatching(reader); // equals sign
 			var typeOfGroup = Parser.GetNextTokenWithoutMatching(reader);
 			var provIds = reader.GetULongs();
-			if (keyword == "impassable_mountains") {
-				if (typeOfGroup == "RANGE") {
-					if (provIds.Count is < 1 or > 2) {
-						throw new FormatException("A range of provinces should have 1 or 2 elements!");
-					}
-					var beginning = provIds[0];
-					var end = provIds.Last();
-					for (var id = beginning; id <= end; ++id) {
-						ColorableImpassableProvinces.Add(id);
-					}
-				} else {
-					ColorableImpassableProvinces.UnionWith(provIds);
+			if (keyword != "impassable_mountains") {
+				return;
+			}
+
+			if (typeOfGroup == "RANGE") {
+				if (provIds.Count is < 1 or > 2) {
+					throw new FormatException("A range of provinces should have 1 or 2 elements!");
 				}
+
+				var beginning = provIds[0];
+				var end = provIds.Last();
+				for (var id = beginning; id <= end; ++id) {
+					ColorableImpassableProvinces.Add(id);
+				}
+			} else {
+				ColorableImpassableProvinces.UnionWith(provIds);
 			}
 		});
-		parser.RegisterRegex(CommonRegexes.Catchall, ParserHelpers.IgnoreAndLogItem);
-		parser.ParseFile(filePath);
+		parser.IgnoreAndLogUnregisteredItems();
+		parser.ParseGameFile(filePath, ck3ModFS);
 	}
+
 	private static Rgb24 GetCenterColor(Point position, Image<Rgb24> provincesMap) {
 		return GetPixelColor(position, provincesMap);
 	}
+
 	private static Rgb24 GetAboveColor(Point position, Image<Rgb24> provincesMap) {
 		if (position.Y > 0) {
 			--position.Y;
 		}
+
 		return GetPixelColor(position, provincesMap);
 	}
+
 	private static Rgb24 GetBelowColor(Point position, int height, Image<Rgb24> provincesMap) {
 		if (position.Y < height - 1) {
 			++position.Y;
 		}
+
 		return GetPixelColor(position, provincesMap);
 	}
+
 	private static Rgb24 GetLeftColor(Point position, Image<Rgb24> provincesMap) {
 		if (position.X > 0) {
 			--position.X;
 		}
+
 		return GetPixelColor(position, provincesMap);
 	}
+
 	private static Rgb24 GetRightColor(Point position, int width, Image<Rgb24> provincesMap) {
 		if (position.X < width - 1) {
 			++position.X;
 		}
+
 		return GetPixelColor(position, provincesMap);
 	}
+
 	private static Rgb24 GetPixelColor(Point position, Image<Rgb24> provincesMap) {
 		return provincesMap[position.X, position.Y];
 	}
@@ -154,10 +193,12 @@ public class MapData {
 			Logger.Warn($"Province not found for color {centerColor}!");
 			return;
 		}
+
 		if (!provinceDefinitions.ColorToProvinceDict.TryGetValue(otherColor, out ulong otherProvince)) {
 			Logger.Warn($"Province not found for color {otherColor}!");
 			return;
 		}
+
 		AddNeighbor(centerProvince, otherProvince);
 	}
 
@@ -165,7 +206,7 @@ public class MapData {
 		if (NeighborsDict.TryGetValue(mainProvince, out var neighbors)) {
 			neighbors.Add(neighborProvince);
 		} else {
-			NeighborsDict[mainProvince] = new HashSet<ulong> { neighborProvince };
+			NeighborsDict[mainProvince] = new HashSet<ulong> {neighborProvince};
 		}
 	}
 }
