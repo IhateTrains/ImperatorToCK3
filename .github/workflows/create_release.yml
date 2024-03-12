@@ -96,7 +96,7 @@ jobs:
         filename: '../ImperatorToCK3-${{ matrix.build }}${{ matrix.archive_extension }}'
     - name: "Upload release asset"
       id: upload-release-asset
-      uses: alexellis/upload-assets@0.4.0
+      uses: alexellis/upload-assets@0.4.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
