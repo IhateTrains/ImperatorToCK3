@@ -1,0 +1,67 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <RuntimeIdentifiers>win-x64;osx-x64;linux-x64</RuntimeIdentifiers>
+        <Nullable>enable</Nullable>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AssemblyName>ConverterFrontend</AssemblyName>
+
+        <IsPackable>false</IsPackable>
+
+        <LangVersion>11</LangVersion>
+
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <OutputPath>..\..\Release\</OutputPath>
+    </PropertyGroup>
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+        <AvaloniaResource Include="Styles\**" />
+        <None Remove=".gitignore" />
+        <None Update="log4net_Fronter.config">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <DebugResources Include="../DEBUG_RESOURCES/**/*.*" />
+    </ItemGroup>
+    <ItemGroup>
+        <Images Include="Assets/Images/**/*.*" />
+    </ItemGroup>
+    <ItemGroup>
+        <Resources Include="Resources/**/*.*" />
+    </ItemGroup>
+    <Target Name="CopyCustomContent" AfterTargets="Build">
+        <Copy Condition="'$(Configuration)' == 'Debug'" SourceFiles="@(DebugResources)" DestinationFolder="$(OutDir)/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(Images)" DestinationFolder="$(OutDir)/Assets/Images/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(Resources)" DestinationFolder="$(OutDir)/%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
+    <Target Name="CopyCustomContentOnPublish" AfterTargets="Publish">
+        <Copy Condition="'$(Configuration)' == 'Debug'" SourceFiles="@(DebugResources)" DestinationFolder="$(PublishDir)/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(Images)" DestinationFolder="$(PublishDir)/Assets/Images/%(RecursiveDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="@(Resources)" DestinationFolder="$(PublishDir)/%(RecursiveDir)" SkipUnchangedFiles="true" />
+    </Target>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.0.10" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.10" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.0.0-preview5" />
+        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+        <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.0.0-preview5" />
+        <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.0-preview5" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0-preview5" />
+        <PackageReference Include="DynamicData" Version="7.13.1" />
+        <PackageReference Include="MessageBox.Avalonia" Version="2.3.1-prev5" />
+        <PackageReference Include="PGCG.commonItems" Version="7.8.10" />
+        <PackageReference Include="System.Data.SQLite.Core" Version="1.0.117" />
+        <PackageReference Include="system.io.filesystem" Version="4.3.0" />
+        <PackageReference Include="System.Net.Primitives" Version="4.3.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <UpToDateCheckInput Remove="Styles\MdStyle.axaml" />
+    </ItemGroup>
+</Project>
